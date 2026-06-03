@@ -27,7 +27,7 @@ import {
 const MAX_HISTORY = 30; // Jumlah titik data maksimum di grafik
 
 // ─── Koneksi Socket.IO ke Back-End ──────────────────────────────────────────
-const socket = io("http://localhost:4000");
+const socket = io("https://just-arora.github.io");
 
 // ─── Helper: Evaluasi comfort zone ──────────────────────────────────────────
 function getComfortStatus(suhu, kelembapan) {

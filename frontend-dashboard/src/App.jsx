@@ -14,6 +14,7 @@ import {
   Thermometer,
   Droplets,
   Sun,
+  Moon,
   UserCheck,
   UserX,
   Activity,
@@ -24,7 +25,7 @@ import {
 } from "lucide-react";
 
 // ─── Konstanta ──────────────────────────────────────────────────────────────
-const MAX_HISTORY = 30; // Jumlah titik data maksimum di grafik
+const MAX_HISTORY = 30;
 
 // ─── Koneksi Socket.IO ke Back-End ──────────────────────────────────────────
 const socket = io("https://just-arora-github-io.vercel.app");
@@ -33,7 +34,6 @@ const socket = io("https://just-arora-github-io.vercel.app");
 function getComfortStatus(suhu, kelembapan) {
   const suhuOk = suhu >= 22 && suhu <= 26;
   const kelembapanOk = kelembapan >= 40 && kelembapan <= 60;
-
   if (suhuOk && kelembapanOk) return "ideal";
   if (!suhuOk && !kelembapanOk) return "danger";
   return "warning";
@@ -43,22 +43,22 @@ function getComfortStatus(suhu, kelembapan) {
 function MetricCard({ label, value, unit, icon: Icon, iconColor, accent, sub }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border ${accent} bg-gray-900 p-5 transition-all duration-300 hover:scale-[1.02]`}
+      className={`relative overflow-hidden rounded-xl border ${accent} bg-white dark:bg-gray-900 p-5 transition-all duration-300 hover:scale-[1.02]`}
     >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-mono uppercase tracking-widest text-gray-500 mb-1">
             {label}
           </p>
-          <p className="text-4xl font-mono font-bold text-gray-100 leading-none">
+          <p className="text-4xl font-mono font-bold text-gray-900 dark:text-gray-100 leading-none">
             {value}
-            <span className="text-xl text-gray-400 ml-1">{unit}</span>
+            <span className="text-xl text-gray-500 dark:text-gray-400 ml-1">{unit}</span>
           </p>
           {sub && (
-            <p className="text-xs text-gray-500 mt-2 font-mono">{sub}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 font-mono">{sub}</p>
           )}
         </div>
-        <div className={`p-2 rounded-lg bg-gray-800 ${iconColor}`}>
+        <div className={`p-2 rounded-lg bg-gray-100 dark:bg-gray-800 ${iconColor}`}>
           <Icon size={22} />
         </div>
       </div>
@@ -67,12 +67,24 @@ function MetricCard({ label, value, unit, icon: Icon, iconColor, accent, sub }) 
 }
 
 // ─── Sub-komponen: Chart Panel ───────────────────────────────────────────────
-function ChartPanel({ title, data, dataKey, color, unit, domain, refLines }) {
+// isDark diteruskan sebagai prop karena Recharts tidak bisa pakai Tailwind dark: classes
+// — warna grid, axis, dan tooltip harus di-set via JS prop, bukan CSS class.
+function ChartPanel({ title, data, dataKey, color, unit, domain, refLines, isDark }) {
+  const gridColor    = isDark ? "#1f2937" : "#e5e7eb";
+  const tickColor    = isDark ? "#4b5563" : "#9ca3af";
+  const tooltipBg    = isDark ? "#030712" : "#ffffff";
+  const tooltipBorder = isDark ? "#374151" : "#e5e7eb";
+  const tooltipLabel = isDark ? "#9ca3af" : "#6b7280";
+  const dotStroke    = isDark ? "#111827" : "#f9fafb";
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono shadow-xl">
-        <p className="text-gray-400 mb-1">{label}</p>
+      <div
+        style={{ backgroundColor: tooltipBg, borderColor: tooltipBorder }}
+        className="border rounded-lg px-3 py-2 text-xs font-mono shadow-xl"
+      >
+        <p style={{ color: tooltipLabel }} className="mb-1">{label}</p>
         <p style={{ color }} className="font-bold">
           {payload[0].value} {unit}
         </p>
@@ -81,29 +93,26 @@ function ChartPanel({ title, data, dataKey, color, unit, domain, refLines }) {
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
       <div className="flex items-center gap-2 mb-4">
-        <span
-          className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: color }}
-        />
-        <h3 className="text-xs font-mono uppercase tracking-widest text-gray-400">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+        <h3 className="text-xs font-mono uppercase tracking-widest text-gray-500 dark:text-gray-400">
           {title}
         </h3>
       </div>
       <ResponsiveContainer width="100%" height={160}>
         <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
             dataKey="time"
-            tick={{ fontSize: 9, fontFamily: "monospace", fill: "#4b5563" }}
+            tick={{ fontSize: 9, fontFamily: "monospace", fill: tickColor }}
             interval="preserveStartEnd"
             tickLine={false}
             axisLine={false}
           />
           <YAxis
             domain={domain}
-            tick={{ fontSize: 9, fontFamily: "monospace", fill: "#4b5563" }}
+            tick={{ fontSize: 9, fontFamily: "monospace", fill: tickColor }}
             tickLine={false}
             axisLine={false}
           />
@@ -123,7 +132,7 @@ function ChartPanel({ title, data, dataKey, color, unit, domain, refLines }) {
             stroke={color}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, fill: color, stroke: "#111827", strokeWidth: 2 }}
+            activeDot={{ r: 4, fill: color, stroke: dotStroke, strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>
@@ -134,38 +143,47 @@ function ChartPanel({ title, data, dataKey, color, unit, domain, refLines }) {
 
 // ─── Komponen Utama: App ─────────────────────────────────────────────────────
 export default function App() {
-  const [history, setHistory] = useState([]);
+  const [history, setHistory]   = useState([]);
   const [connected, setConnected] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [tick, setTick]         = useState(0);
 
-  // Ambil data terbaru (nilai "saat ini") untuk mengisi kotak metrik di atas
-  const latest = history.length > 0 ? history[history.length - 1] : { suhu: 0, kelembapan: 0, cahaya: 0, orang: 0 };
-  
+  // Baca preferensi dari localStorage saat mount; default ke dark
+  const [isDark, setIsDark] = useState(
+    () => localStorage.getItem("theme") !== "light"
+  );
+
+  const latest = history.length > 0
+    ? history[history.length - 1]
+    : { suhu: 0, kelembapan: 0, cahaya: 0, orang: 0 };
+
   const comfortStatus = getComfortStatus(latest.suhu, latest.kelembapan);
 
-  // useEffect: Mendengarkan data dari server back-end
+  // ── Effect: Sinkronisasi isDark → class di <html> + localStorage ──────────
+  // Mengapa di <html>, bukan di wrapper <div>?
+  // Tailwind `dark:` strategy membaca class dari document.documentElement (root).
+  // Jika diletakkan di <div>, class `dark` tidak akan "terlihat" oleh Tailwind.
   useEffect(() => {
-    // Jika berhasil terhubung ke server
-    socket.on("connect", () => {
-      setConnected(true);
-    });
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
 
-    // Jika server mati atau terputus
-    socket.on("disconnect", () => {
-      setConnected(false);
-    });
-
-    // Menerima kiriman data dari server (bernama 'sensor_update')
+  // ── Effect: Socket.IO listeners ──────────────────────────────────────────
+  useEffect(() => {
+    socket.on("connect",    () => setConnected(true));
+    socket.on("disconnect", () => setConnected(false));
     socket.on("sensor_update", (dataBaru) => {
       setHistory((prev) => {
-        // Potong history agar tidak melebihi MAX_HISTORY titik grafik
         const trimmed = prev.length >= MAX_HISTORY ? prev.slice(1) : prev;
         return [...trimmed, dataBaru];
       });
       setTick((t) => t + 1);
     });
-
-    // Cleanup: matikan listener saat komponen ditutup
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -176,28 +194,28 @@ export default function App() {
   // ─── Comfort Zone Config ──────────────────────────────────────────────────
   const comfortConfig = {
     ideal: {
-      icon: CheckCircle2,
-      text: "Kondisi: Ideal",
-      bg: "bg-emerald-950",
-      border: "border-emerald-800",
-      color: "text-emerald-400",
-      iconColor: "text-emerald-400",
+      icon:      CheckCircle2,
+      text:      "Kondisi: Ideal",
+      bg:        "bg-emerald-50 dark:bg-emerald-950",
+      border:    "border-emerald-200 dark:border-emerald-800",
+      color:     "text-emerald-600 dark:text-emerald-400",
+      iconColor: "text-emerald-600 dark:text-emerald-400",
     },
     warning: {
-      icon: AlertTriangle,
-      text: "Kondisi: Perlu Perhatian",
-      bg: "bg-amber-950",
-      border: "border-amber-800",
-      color: "text-amber-400",
-      iconColor: "text-amber-400",
+      icon:      AlertTriangle,
+      text:      "Kondisi: Perlu Perhatian",
+      bg:        "bg-amber-50 dark:bg-amber-950",
+      border:    "border-amber-200 dark:border-amber-800",
+      color:     "text-amber-600 dark:text-amber-400",
+      iconColor: "text-amber-600 dark:text-amber-400",
     },
     danger: {
-      icon: AlertTriangle,
-      text: "Kondisi: Tidak Nyaman",
-      bg: "bg-red-950",
-      border: "border-red-900",
-      color: "text-red-400",
-      iconColor: "text-red-400",
+      icon:      AlertTriangle,
+      text:      "Kondisi: Tidak Nyaman",
+      bg:        "bg-red-50 dark:bg-red-950",
+      border:    "border-red-200 dark:border-red-900",
+      color:     "text-red-600 dark:text-red-400",
+      iconColor: "text-red-600 dark:text-red-400",
     },
   };
 
@@ -205,37 +223,52 @@ export default function App() {
   const ComfortIcon = comfort.icon;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 font-sans">
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
+    // transition-colors memberikan animasi halus saat switching tema
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur sticky top-0 z-10 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Activity size={20} className="text-cyan-400" />
-            <h1 className="text-sm font-mono font-bold tracking-widest uppercase text-gray-100">
+            <Activity size={20} className="text-cyan-500 dark:text-cyan-400" />
+            <h1 className="text-sm font-mono font-bold tracking-widest uppercase text-gray-900 dark:text-gray-100">
               Smart Room & Desk Monitor
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-xs font-mono text-gray-500">
+            <span className="flex items-center gap-1.5 text-xs font-mono text-gray-400 dark:text-gray-500">
               <Clock size={12} />
               Update #{tick}
             </span>
             <div
               className={`flex items-center gap-2 text-xs font-mono ${
-                connected ? "text-emerald-400" : "text-red-400"
+                connected
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-red-500 dark:text-red-400"
               }`}
             >
               <Wifi size={14} />
               {connected ? "LIVE" : "OFFLINE"}
             </div>
+
+            {/* ── Toggle Light / Dark Mode ───────────────────────────────── */}
+            <button
+              onClick={() => setIsDark((d) => !d)}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors duration-200"
+            >
+              {/* Tampilkan Sun jika sedang dark (klik → pindah ke light), sebaliknya Moon */}
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* ── Metric Cards ────────────────────────────────────────────── */}
+
+        {/* ── Metric Cards ─────────────────────────────────────────────────── */}
         <section>
-          <p className="text-xs font-mono uppercase tracking-widest text-gray-600 mb-4">
+          <p className="text-xs font-mono uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-4">
             Bacaan Sensor Saat Ini
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -244,8 +277,8 @@ export default function App() {
               value={latest?.suhu ?? "—"}
               unit="°C"
               icon={Thermometer}
-              iconColor="text-orange-400"
-              accent="border-orange-900/60"
+              iconColor="text-orange-500 dark:text-orange-400"
+              accent="border-orange-200 dark:border-orange-900/60"
               sub={`Range: 22–30°C`}
             />
             <MetricCard
@@ -253,8 +286,8 @@ export default function App() {
               value={latest?.kelembapan ?? "—"}
               unit="%RH"
               icon={Droplets}
-              iconColor="text-blue-400"
-              accent="border-blue-900/60"
+              iconColor="text-blue-500 dark:text-blue-400"
+              accent="border-blue-200 dark:border-blue-900/60"
               sub={`Range: 40–70%`}
             />
             <MetricCard
@@ -262,8 +295,8 @@ export default function App() {
               value={latest?.cahaya ?? "—"}
               unit="Lux"
               icon={Sun}
-              iconColor="text-yellow-400"
-              accent="border-yellow-900/60"
+              iconColor="text-yellow-500 dark:text-yellow-400"
+              accent="border-yellow-200 dark:border-yellow-900/60"
               sub={`Range: 0–500 Lux`}
             />
             <MetricCard
@@ -272,29 +305,31 @@ export default function App() {
               unit=""
               icon={latest?.orang === 1 ? UserCheck : UserX}
               iconColor={
-                latest?.orang === 1 ? "text-emerald-400" : "text-gray-500"
+                latest?.orang === 1
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-gray-400 dark:text-gray-500"
               }
               accent={
                 latest?.orang === 1
-                  ? "border-emerald-900/60"
-                  : "border-gray-800"
+                  ? "border-emerald-200 dark:border-emerald-900/60"
+                  : "border-gray-200 dark:border-gray-800"
               }
               sub={`Sinyal PIR: ${latest?.orang ?? "—"}`}
             />
           </div>
         </section>
 
-        {/* ── Comfort Zone Indicator ───────────────────────────────────── */}
+        {/* ── Comfort Zone Indicator ───────────────────────────────────────── */}
         <section>
           <div
-            className={`flex items-center gap-3 rounded-xl border px-5 py-3.5 ${comfort.bg} ${comfort.border}`}
+            className={`flex items-center gap-3 rounded-xl border px-5 py-3.5 transition-colors duration-300 ${comfort.bg} ${comfort.border}`}
           >
             <ComfortIcon size={18} className={comfort.iconColor} />
             <div className="flex-1">
               <p className={`text-sm font-mono font-bold ${comfort.color}`}>
                 {comfort.text}
               </p>
-              <p className="text-xs text-gray-500 font-mono mt-0.5">
+              <p className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5">
                 Suhu ideal: 22–26°C &nbsp;·&nbsp; Kelembapan ideal: 40–60%RH
                 &nbsp;·&nbsp; Saat ini:{" "}
                 <span className={comfort.color}>
@@ -305,9 +340,9 @@ export default function App() {
           </div>
         </section>
 
-        {/* ── Time-Series Charts ───────────────────────────────────────── */}
+        {/* ── Time-Series Charts ───────────────────────────────────────────── */}
         <section>
-          <p className="text-xs font-mono uppercase tracking-widest text-gray-600 mb-4">
+          <p className="text-xs font-mono uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-4">
             Riwayat Sensor (30 Titik Terakhir)
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -322,6 +357,7 @@ export default function App() {
                 { value: 22, color: "#34d399" },
                 { value: 26, color: "#34d399" },
               ]}
+              isDark={isDark}
             />
             <ChartPanel
               title="Kelembapan (%RH)"
@@ -334,6 +370,7 @@ export default function App() {
                 { value: 40, color: "#34d399" },
                 { value: 60, color: "#34d399" },
               ]}
+              isDark={isDark}
             />
             <ChartPanel
               title="Intensitas Cahaya (Lux)"
@@ -342,20 +379,21 @@ export default function App() {
               color="#facc15"
               unit="Lux"
               domain={[0, 520]}
+              isDark={isDark}
             />
           </div>
         </section>
 
-        {/* ── Status Tabel ───────────────────────────── */}
+        {/* ── Log Data Terbaru ─────────────────────────────────────────────── */}
         <section>
-          <p className="text-xs font-mono uppercase tracking-widest text-gray-600 mb-4">
+          <p className="text-xs font-mono uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-4">
             Log Data Terbaru
           </p>
-          <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-300">
             <div className="overflow-x-auto">
               <table className="w-full text-xs font-mono">
                 <thead>
-                  <tr className="border-b border-gray-800 text-gray-500">
+                  <tr className="border-b border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-500">
                     <th className="text-left px-4 py-3">Waktu</th>
                     <th className="text-right px-4 py-3">Suhu (°C)</th>
                     <th className="text-right px-4 py-3">Kelembapan (%)</th>
@@ -367,26 +405,28 @@ export default function App() {
                   {[...history].reverse().slice(0, 8).map((row, i) => (
                     <tr
                       key={i}
-                      className={`border-b border-gray-800/50 ${
-                        i === 0 ? "bg-gray-800/40" : ""
-                      } hover:bg-gray-800/30 transition-colors`}
+                      className={`border-b border-gray-100 dark:border-gray-800/50 ${
+                        i === 0
+                          ? "bg-gray-50 dark:bg-gray-800/40"
+                          : ""
+                      } hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors`}
                     >
-                      <td className="px-4 py-2.5 text-gray-400">{row.time}</td>
-                      <td className="px-4 py-2.5 text-right text-orange-400">
+                      <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400">{row.time}</td>
+                      <td className="px-4 py-2.5 text-right text-orange-500 dark:text-orange-400">
                         {row.suhu}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-blue-400">
+                      <td className="px-4 py-2.5 text-right text-blue-500 dark:text-blue-400">
                         {row.kelembapan}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-yellow-400">
+                      <td className="px-4 py-2.5 text-right text-yellow-500 dark:text-yellow-400">
                         {row.cahaya}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-xs ${
                             row.orang === 1
-                              ? "bg-emerald-900/60 text-emerald-400"
-                              : "bg-gray-800 text-gray-500"
+                              ? "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400"
+                              : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
                           }`}
                         >
                           {row.orang === 1 ? "Ada Orang" : "Kosong"}
@@ -401,9 +441,9 @@ export default function App() {
         </section>
       </main>
 
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <footer className="max-w-7xl mx-auto px-6 py-6 mt-4 border-t border-gray-800">
-        <p className="text-xs font-mono text-gray-600 text-center">
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      <footer className="max-w-7xl mx-auto px-6 py-6 mt-4 border-t border-gray-200 dark:border-gray-800">
+        <p className="text-xs font-mono text-gray-400 dark:text-gray-600 text-center">
           Smart Room & Desk Monitoring · Data disiarkan dari server Node.js
         </p>
       </footer>

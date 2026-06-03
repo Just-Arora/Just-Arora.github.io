@@ -8,7 +8,7 @@ const server = http.createServer(app);
 // Konfigurasi CORS agar diizinkan diakses oleh port default Vite (5173)
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://just-arora.github.io",
     methods: ["GET", "POST"]
   }
 });

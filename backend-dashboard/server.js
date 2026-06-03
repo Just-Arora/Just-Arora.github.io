@@ -5,7 +5,6 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// Konfigurasi CORS agar diizinkan diakses oleh port default Vite (5173)
 const io = new Server(server, {
   cors: {
     origin: "https://just-arora.github.io",
@@ -13,10 +12,42 @@ const io = new Server(server, {
   }
 });
 
-// State internal di server untuk melacak titik data sebelumnya (untuk efek jitter/fluktuasi halus)
 let lastDataPoint = null;
 
-// Mengadopsi algoritma fluktuasi bertahap dari kode App.jsx Anda
+/**
+ * Endpoint status server
+ */
+app.get('/', (req, res) => {
+  res.json({
+    service: 'IoT Dashboard WebSocket Server',
+    status: 'online',
+    websocket: true,
+    connectedClients: io.engine.clientsCount,
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * Endpoint health check
+ */
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy'
+  });
+});
+
+/**
+ * Endpoint status websocket
+ */
+app.get('/ws-status', (req, res) => {
+  res.json({
+    websocket: 'running',
+    connectedClients: io.engine.clientsCount,
+    transport: ['websocket', 'polling'],
+    timestamp: new Date().toISOString()
+  });
+});
+
 function generateDataPoint() {
   const rand = (min, max) => +(Math.random() * (max - min) + min).toFixed(1);
   const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
@@ -37,14 +68,12 @@ function generateDataPoint() {
   return lastDataPoint;
 }
 
-// Handler WebSocket koneksi
 io.on('connection', (socket) => {
   console.log(`[${new Date().toLocaleTimeString()}] Dashboard terhubung: ${socket.id}`);
 
-  // Kirim data baru setiap 2 detik ke client yang terhubung
   const interval = setInterval(() => {
     const newData = generateDataPoint();
-    socket.emit('sensor_update', newData); // Menggunakan event 'sensor_update'
+    socket.emit('sensor_update', newData);
   }, 2000);
 
   socket.on('disconnect', () => {
@@ -53,7 +82,8 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
+
 server.listen(PORT, () => {
-  console.log(`Server Back-End IoT berjalan di http://localhost:${PORT}`);
+  console.log(`Server berjalan di port ${PORT}`);
 });

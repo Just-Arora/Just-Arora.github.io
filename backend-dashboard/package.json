@@ -1,17 +1,23 @@
 {
   "name": "backend-dashboard",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "IoT Dashboard Backend with Express and Socket.IO",
+  "main": "server.js",
+  "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
+            "start": "node server.js",
+            "dev": "node --watch server.js"
+            },
+  "keywords": [
+  "express",
+  "socket.io",
+  "iot",
+  "websocket"
+  ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "express": "^5.2.1",
-    "socket.io": "^4.8.3"
+  "express": "^5.2.1",
+  "socket.io": "^4.8.3"
   }
 }
